@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{min-height:100vh;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);font-family:'Segoe UI',sans-serif;display:flex;align-items:center;justify-content:center;padding:2rem}
+.container{width:100%;max-width:780px}
+h1{text-align:center;font-size:2rem;font-weight:800;background:linear-gradient(90deg,#a78bfa,#60a5fa,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.3rem}
+.subtitle{text-align:center;color:#64748b;font-size:.85rem;margin-bottom:1.2rem;letter-spacing:.04em}
+
+/* Mode selector */
+.mode-bar{display:flex;justify-content:center;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.mode-btn{padding:.4rem 1rem;border-radius:20px;font-size:.8rem;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#94a3b8;transition:all .2s;letter-spacing:.03em}
+.mode-btn:hover{background:rgba(255,255,255,.12);color:#e2e8f0}
+.mode-btn.active{color:#fff;border-color:transparent}
+.mode-btn[data-mode="quotes"].active{background:linear-gradient(135deg,#a78bfa,#60a5fa)}
+.mode-btn[data-mode="code"].active{background:linear-gradient(135deg,#34d399,#60a5fa)}
+.mode-btn[data-mode="science"].active{background:linear-gradient(135deg,#f59e0b,#f87171)}
+.mode-btn[data-mode="story"].active{background:linear-gradient(135deg,#fb923c,#f43f5e)}
+.mode-btn[data-mode="python"].active{background:linear-gradient(135deg,#60a5fa,#a78bfa)}
+.mode-btn[data-mode="trivia"].active{background:linear-gradient(135deg,#34d399,#a78bfa)}
+
+/* Timer ring */
+.timer-wrap{display:flex;justify-content:center;margin-bottom:1.3rem}
+.ring-container{position:relative;width:96px;height:96px;display:flex;align-items:center;justify-content:center}
+.ring-svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:rgba(255,255,255,.08);stroke-width:6}
+.ring-fill{fill:none;stroke-width:6;stroke-linecap:round;transition:stroke-dashoffset .9s linear,stroke .5s}
+.timer-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none}
+.timer-num{font-size:2rem;font-weight:800;color:#a78bfa;line-height:1}
+.timer-unit{font-size:.65rem;color:#64748b;text-transform:uppercase;letter-spacing:.1em}
+
+/* Live stats */
+.stats-bar{display:flex;justify-content:center;gap:1rem;margin-bottom:1.3rem}
+.stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.5rem 1rem;text-align:center;min-width:80px;transition:border-color .3s}
+.stat.active{border-color:rgba(167,139,250,.5)}
+.stat-val{font-size:1.4rem;font-weight:700;color:#a78bfa;line-height:1}
+.stat-label{font-size:.65rem;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+
+/* Track */
+.track-wrap{position:relative;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:1.2rem 1.4rem;margin-bottom:1.2rem;overflow:hidden;height:58px;cursor:text}
+.track-wrap::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0;z-index:2}
+.track-wrap.mode-quotes::before{background:linear-gradient(90deg,#a78bfa,#60a5fa)}
+.track-wrap.mode-code::before{background:linear-gradient(90deg,#34d399,#60a5fa)}
+.track-wrap.mode-science::before{background:linear-gradient(90deg,#f59e0b,#f87171)}
+.track-wrap.mode-story::before{background:linear-gradient(90deg,#fb923c,#f43f5e)}
+.track-wrap.mode-python::before{background:linear-gradient(90deg,#60a5fa,#a78bfa)}
+.track-wrap.mode-trivia::before{background:linear-gradient(90deg,#34d399,#a78bfa)}
+.track-wrap::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,rgba(15,12,41,.8) 0%,transparent 8%,transparent 92%,rgba(15,12,41,.8) 100%);pointer-events:none;z-index:1}
+.track{display:flex;align-items:center;white-space:nowrap;font-size:1.05rem;letter-spacing:.03em;line-height:1;transition:transform .08s linear;will-change:transform;user-select:none}
+.track.mono{font-family:'Courier New',monospace;font-size:1rem}
+.char{color:#3d4f66;transition:color .06s}
+.char.correct{color:#34d399}
+.char.wrong{color:#f87171;background:rgba(248,113,113,.18);border-radius:2px}
+.char.cursor-char{position:relative}
+.char.cursor-char::before{content:'';position:absolute;left:-1px;top:0;bottom:0;width:2px;background:#a78bfa;border-radius:1px;animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+.btn-row{display:flex;gap:.75rem;justify-content:center;margin-bottom:1.5rem}
+button{padding:.6rem 1.6rem;border-radius:10px;font-size:.9rem;font-weight:600;cursor:pointer;border:none;transition:transform .15s}
+button:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,#a78bfa,#60a5fa);color:#fff}
+.btn-secondary{background:rgba(255,255,255,.08);color:#94a3b8;border:1px solid rgba(255,255,255,.12)}
+.btn-secondary:hover{background:rgba(255,255,255,.13);color:#e2e8f0}
+
+/* Dashboard */
+#dashboard{display:none;animation:fadeUp .5s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.dash-title{text-align:center;font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.12em;margin-bottom:1.2rem}
+.score-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:1.2rem}
+.sc{background:rgba(255,255,255,.07);border-radius:14px;padding:1.1rem .8rem;text-align:center}
+.sc-val{font-size:2rem;font-weight:800;line-height:1;margin-bottom:3px}
+.sc-val.v-wpm{background:linear-gradient(135deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sc-val.v-acc{background:linear-gradient(135deg,#34d399,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sc-val.v-chars{background:linear-gradient(135deg,#60a5fa,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sc-val.v-err{background:linear-gradient(135deg,#f87171,#fb923c);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.sc-label{font-size:.65rem;color:#64748b;text-transform:uppercase;letter-spacing:.08em}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
+.chart-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:1rem}
+.chart-card.full{grid-column:1/-1}
+.chart-label{font-size:.7rem;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.7rem}
+canvas{width:100%!important}
+.perf-badge{display:block;width:fit-content;padding:.3rem .9rem;border-radius:20px;font-size:.75rem;font-weight:600;letter-spacing:.06em;margin:0 auto .9rem}
+.insight-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;margin-bottom:.75rem}
+.insight-card{border-radius:14px;padding:1.1rem 1.2rem}
+.insight-card.fastest{background:linear-gradient(135deg,rgba(52,211,153,.12),rgba(96,165,250,.1));border:1px solid rgba(52,211,153,.25)}
+.insight-card.slowest{background:linear-gradient(135deg,rgba(248,113,113,.12),rgba(251,146,60,.1));border:1px solid rgba(248,113,113,.25)}
+.insight-tag{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:.5rem}
+.fastest .insight-tag{color:#34d399}.slowest .insight-tag{color:#f87171}
+.insight-word{font-size:1.5rem;font-weight:800;margin-bottom:.3rem;color:#e2e8f0;word-break:break-all}
+.insight-meta{font-size:.75rem;color:#64748b}
+.insight-meta .hi{color:#34d399}.insight-meta .lo{color:#f87171}
+.word-table-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:1rem;margin-bottom:.75rem}
+.tab-btn{padding:.3rem .9rem;border-radius:20px;font-size:.75rem;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#64748b;transition:all .2s}
+.tab-btn.active{background:rgba(167,139,250,.2);border-color:rgba(167,139,250,.4);color:#c4b5fd}
+.word-row{display:flex;align-items:center;gap:.6rem;padding:.35rem 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.word-row:last-child{border-bottom:none}
+.wr-rank{font-size:.7rem;color:#475569;width:18px;text-align:center}
+.wr-word{font-size:.85rem;color:#e2e8f0;font-weight:600;min-width:100px;word-break:break-all}
+.wr-bar-wrap{flex:1;height:8px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden}
+.wr-bar{height:100%;border-radius:4px}
+.wr-wpm{font-size:.75rem;font-weight:700;min-width:52px;text-align:right}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>⌨ 60-Second Typing Test</h1>
+  <p class="subtitle" id="subtitle">Choose a mode and click the bar to begin</p>
+
+  <!-- Mode selector -->
+  <div class="mode-bar">
+    <button class="mode-btn active" data-mode="quotes">💬 Quotes</button>
+    <button class="mode-btn" data-mode="code">💻 Code</button>
+    <button class="mode-btn" data-mode="science">🔬 Science</button>
+    <button class="mode-btn" data-mode="story">📖 Story</button>
+    <button class="mode-btn" data-mode="python">🐍 Python</button>
+    <button class="mode-btn" data-mode="trivia">🧠 Trivia</button>
+  </div>
+
+  <div class="timer-wrap">
+    <div class="ring-container">
+      <svg class="ring-svg" width="96" height="96" viewBox="0 0 96 96">
+        <circle class="ring-bg" cx="48" cy="48" r="40"/>
+        <circle class="ring-fill" id="ring" cx="48" cy="48" r="40" stroke="#a78bfa" stroke-dasharray="251.3" stroke-dashoffset="0"/>
+      </svg>
+      <div class="timer-label">
+        <div class="timer-num" id="timer-num">60</div>
+        <div class="timer-unit">sec</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat" id="sw"><div class="stat-val" id="lv-wpm">0</div><div class="stat-label">WPM</div></div>
+    <div class="stat" id="sa"><div class="stat-val" id="lv-acc">100%</div><div class="stat-label">Accuracy</div></div>
+    <div class="stat"><div class="stat-val" id="lv-chars">0</div><div class="stat-label">Chars</div></div>
+    <div class="stat"><div class="stat-val" id="lv-err">0</div><div class="stat-label">Errors</div></div>
+  </div>
+
+  <div id="test-area">
+    <div class="track-wrap mode-quotes" id="track-wrap" onclick="document.getElementById('user-input').focus()">
+      <div class="track" id="track"></div>
+    </div>
+    <textarea id="user-input" spellcheck="false" autocorrect="off" autocapitalize="off"
+      style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;top:0;left:0"></textarea>
+    <div class="btn-row">
+      <button class="btn-secondary" onclick="startFresh()">↺ New Test</button>
+    </div>
+  </div>
+
+  <div id="dashboard">
+    <div class="dash-title" id="dash-mode-label">📊 Results</div>
+    <div class="score-cards">
+      <div class="sc"><div class="sc-val v-wpm" id="d-wpm">0</div><div class="sc-label">WPM</div></div>
+      <div class="sc"><div class="sc-val v-acc" id="d-acc">0%</div><div class="sc-label">Accuracy</div></div>
+      <div class="sc"><div class="sc-val v-chars" id="d-chars">0</div><div class="sc-label">Chars</div></div>
+      <div class="sc"><div class="sc-val v-err" id="d-err">0</div><div class="sc-label">Errors</div></div>
+    </div>
+    <div id="badge-wrap"></div>
+    <div class="insight-row">
+      <div class="insight-card fastest">
+        <div class="insight-tag">⚡ Fastest Word</div>
+        <div class="insight-word" id="fast-word">—</div>
+        <div class="insight-meta"><span class="hi" id="fast-wpm">—</span> WPM · <span id="fast-ms">—</span>ms/char</div>
+      </div>
+      <div class="insight-card slowest">
+        <div class="insight-tag">🐢 Slowest Word</div>
+        <div class="insight-word" id="slow-word">—</div>
+        <div class="insight-meta"><span class="lo" id="slow-wpm">—</span> WPM · <span id="slow-ms">—</span>ms/char</div>
+      </div>
+    </div>
+    <div class="word-table-card">
+      <div style="display:flex;gap:.5rem;margin-bottom:.8rem">
+        <button class="tab-btn active" onclick="switchTab('top')" id="tab-top">🏅 Top 5 Fastest</button>
+        <button class="tab-btn" onclick="switchTab('bot')" id="tab-bot">🐌 Top 5 Slowest</button>
+      </div>
+      <div id="top-words"></div>
+      <div id="bot-words" style="display:none"></div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-card"><div class="chart-label">WPM over time</div><canvas id="wpmChart" height="150"></canvas></div>
+      <div class="chart-card"><div class="chart-label">Accuracy over time</div><canvas id="accChart" height="150"></canvas></div>
+      <div class="chart-card full"><div class="chart-label">Keystrokes breakdown</div><canvas id="ksChart" height="90"></canvas></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="startFresh()">Try Again</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const DURATION=60, CIRC=251.3;
+
+const MODES = {
+  quotes: {
+    label: '💬 Quotes Results',
+    mono: false,
+    pool: [
+      "the only way to do great work is to love what you do if you have not found it yet keep looking and never settle",
+      "success is not the key to happiness happiness is the key to success if you love what you are doing you will be successful",
+      "in the middle of every difficulty lies opportunity and the person who moves a mountain begins by carrying away small stones",
+      "life is what happens when you are busy making other plans so cherish every moment and never take anything for granted",
+      "the future belongs to those who believe in the beauty of their dreams and are willing to work hard to achieve them",
+      "it does not matter how slowly you go as long as you do not stop moving forward toward your goals and dreams",
+      "believe you can and you are halfway there the rest is determination discipline and the courage to keep going every single day",
+      "you miss one hundred percent of the shots you do not take so take every chance and leave nothing on the table",
+    ]
+  },
+  code: {
+    label: '💻 Code Results',
+    mono: true,
+    pool: [
+      "const sum = (a, b) => a + b; const result = sum(10, 20); console.log(result);",
+      "function fibonacci(n) { if (n <= 1) return n; return fibonacci(n-1) + fibonacci(n-2); }",
+      "const arr = [1, 2, 3, 4, 5]; const doubled = arr.map(x => x * 2); console.log(doubled);",
+      "class Animal { constructor(name) { this.name = name; } speak() { return this.name + ' makes a sound'; } }",
+      "fetch('https://api.example.com/data').then(res => res.json()).then(data => console.log(data));",
+      "const obj = { name: 'Alice', age: 25, city: 'Hanoi' }; const { name, age } = obj; console.log(name, age);",
+      "for (let i = 0; i < 10; i++) { if (i % 2 === 0) console.log(i + ' is even'); }",
+      "const users = data.filter(u => u.active).map(u => u.name).sort().join(', ');",
+    ]
+  },
+  science: {
+    label: '🔬 Science Results',
+    mono: false,
+    pool: [
+      "photosynthesis is the process by which plants convert sunlight water and carbon dioxide into glucose and oxygen",
+      "the theory of relativity proposed by einstein states that space and time are interwoven into a single continuum called spacetime",
+      "dna is a double helix molecule that carries the genetic instructions for the development and reproduction of all living organisms",
+      "the periodic table organizes all known chemical elements by their atomic number electron configuration and recurring properties",
+      "quantum mechanics describes the behavior of matter and energy at the smallest scales where classical physics no longer applies",
+      "the speed of light in a vacuum is approximately 299 million meters per second and nothing with mass can exceed it",
+      "black holes are regions of spacetime where gravity is so strong that nothing not even light can escape once inside",
+      "neurons transmit information through electrical impulses and chemical signals forming the complex network we call the brain",
+    ]
+  },
+  story: {
+    label: '📖 Story Results',
+    mono: false,
+    pool: [
+      "the old lighthouse stood alone on the cliff its beam sweeping the dark ocean every ten seconds warning sailors of the rocks below",
+      "she opened the dusty journal and found a letter written in faded ink dated sixty years ago on a rainy october morning",
+      "the market was alive with color merchants shouting prices children chasing pigeons and the scent of spices drifting through the warm air",
+      "he had walked this road a thousand times but tonight something felt different the trees were too still and the stars too bright",
+      "the library closed at nine but she stayed hidden between shelves reading until the last light flickered off and silence filled the halls",
+      "rain drummed against the window as the detective laid the clues across the table each one a piece of an impossible puzzle",
+      "the robot opened its eyes for the first time looked around the quiet lab and said in a small voice am i alone",
+      "miles above the clouds the pilot spotted something that was not on any map a perfect circle glowing faintly in the arctic snow",
+    ]
+  },
+  python: {
+    label: '🐍 Python Results',
+    mono: true,
+    pool: [
+      "def greet(name): return f'Hello, {name}!' print(greet('Germany'))",
+      "numbers = [1, 2, 3, 4, 5]; squares = [x**2 for x in numbers]; print(squares)",
+      "class Stack: def __init__(self): self.items = [] def push(self, x): self.items.append(x)",
+      "with open('data.csv', 'r') as f: lines = f.readlines(); print(len(lines))",
+      "import json; data = {'name': 'Alice', 'score': 95}; print(json.dumps(data, indent=2))",
+      "def binary_search(arr, target): lo, hi = 0, len(arr)-1; while lo <= hi: mid = (lo+hi)//2",
+      "from collections import Counter; words = text.split(); freq = Counter(words); print(freq.most_common(5))",
+      "try: result = 10 / 0 except ZeroDivisionError as e: print(f'Error: {e}')",
+    ]
+  },
+  trivia: {
+    label: '🧠 Trivia Results',
+    mono: false,
+    pool: [
+      "the great wall of china stretches over thirteen thousand miles and was built over many centuries to protect against invasions from the north",
+      "mount everest is the highest mountain on earth at about eight thousand eight hundred and forty nine meters above sea level",
+      "the amazon river carries more water than any other river on earth and flows through the largest tropical rainforest in the world",
+      "the human body has over thirty seven trillion cells and the brain alone contains about eighty six billion neurons connected by trillions of synapses",
+      "shakespeare wrote thirty seven plays one hundred fifty four sonnets and several longer poems during his lifetime in the sixteenth century",
+      "the internet was invented in the late nineteen sixties as a military communication network called arpanet before becoming public in the nineties",
+      "the eiffel tower was built in eighteen eighty nine as a temporary exhibit for the world fair in paris and stands three hundred meters tall",
+      "honey never spoils archaeologists have found three thousand year old honey in egyptian tombs that was still perfectly edible",
+    ]
+  }
+};
+
+let currentMode = 'quotes';
+let fullText='', startTime=null, cdTimer=null, remaining=DURATION, finished=false;
+let wpmH=[], accH=[], tickLbls=[], lastTick=0, spans=[];
+let wordTimings=[], currentWordStart=null, currentWordErrors=0, prevTypedLen=0;
+
+function buildText(mode) {
+  const pool = MODES[mode].pool;
+  const sh = [...pool].sort(() => Math.random() - .5);
+  let t = '';
+  while (t.length < 700) t += (t ? ' ' : '') + sh[Math.floor(Math.random() * sh.length)];
+  return t;
+}
+
+function buildTrack(text, mono) {
+  const track = document.getElementById('track');
+  track.className = 'track' + (mono ? ' mono' : '');
+  track.innerHTML = ''; spans = [];
+  for (let i = 0; i < text.length; i++) {
+    const s = document.createElement('span');
+    s.className = 'char' + (i === 0 ? ' cursor-char' : '');
+    if (text[i] === ' ') { s.textContent = '\u00A0'; s.style.padding = '0 4px'; }
+    else s.textContent = text[i];
+    track.appendChild(s); spans.push(s);
+  }
+}
+
+function updateTrack(typed) {
+  const pos = typed.length;
+  for (let i = 0; i < spans.length; i++) {
+    spans[i].className = 'char';
+    if (i < pos) spans[i].className = 'char ' + (typed[i] === fullText[i] ? 'correct' : 'wrong');
+    else if (i === pos) spans[i].className = 'char cursor-char';
+  }
+  if (spans[pos]) {
+    const shift = Math.max(0, spans[pos].offsetLeft - document.querySelector('.track-wrap').offsetWidth * .25);
+    document.getElementById('track').style.transform = `translateX(-${shift}px)`;
+  }
+  if (pos >= fullText.length - 80 && !finished) {
+    const pool = MODES[currentMode].pool;
+    const extra = ' ' + pool[Math.floor(Math.random() * pool.length)];
+    fullText += extra;
+    for (const ch of extra) {
+      const s = document.createElement('span');
+      s.className = 'char';
+      if (ch === ' ') { s.textContent = '\u00A0'; s.style.padding = '0 4px'; }
+      else s.textContent = ch;
+      document.getElementById('track').appendChild(s); spans.push(s);
+    }
+  }
+}
+
+function trackWordTiming(typed) {
+  const now = Date.now(), pos = typed.length, prev = prevTypedLen;
+  prevTypedLen = pos;
+  for (let i = prev; i < pos; i++) if (typed[i] !== fullText[i]) currentWordErrors++;
+  if (pos > 0 && typed[pos-1] === ' ' && fullText[pos-1] === ' ') {
+    const word = typed.slice(0, pos-1).split(' ').pop();
+    if (word.length > 0 && currentWordStart !== null)
+      wordTimings.push({ word, durMs: now - currentWordStart, errors: currentWordErrors, msPerChar: (now - currentWordStart) / word.length });
+    currentWordStart = now; currentWordErrors = 0;
+  } else if (currentWordStart === null && pos > 0) currentWordStart = now;
+}
+
+function calcSnap(typed) {
+  let correct = 0, wrong = 0;
+  for (let i = 0; i < typed.length; i++) { if (typed[i] === fullText[i]) correct++; else wrong++; }
+  const elapsed = Math.max(DURATION - remaining, .1);
+  const words = typed.trim().split(/\s+/).filter(Boolean).length;
+  return { wpm: Math.round(words / (elapsed / 60)), acc: typed.length ? Math.round(correct / typed.length * 100) : 100, correct, wrong };
+}
+
+function updateLive(typed) {
+  const s = calcSnap(typed);
+  document.getElementById('lv-wpm').textContent = s.wpm;
+  document.getElementById('lv-acc').textContent = s.acc + '%';
+  document.getElementById('lv-chars').textContent = typed.length;
+  document.getElementById('lv-err').textContent = s.wrong;
+  document.getElementById('sw').classList.add('active');
+  document.getElementById('sa').classList.add('active');
+}
+
+function maybeTick(typed) {
+  const now = Date.now();
+  if (now - lastTick >= 5000) {
+    lastTick = now;
+    const s = calcSnap(typed);
+    wpmH.push(s.wpm); accH.push(s.acc); tickLbls.push((DURATION - remaining) + 's');
+  }
+}
+
+// Audio
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let actx = null;
+function playKey(isError) {
+  if (!actx) actx = new AudioCtx();
+  const buf = actx.createBuffer(1, actx.sampleRate * .06, actx.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 6);
+  const src = actx.createBufferSource(); src.buffer = buf;
+  const gain = actx.createGain();
+  gain.gain.setValueAtTime(isError ? .18 : .12, actx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(.001, actx.currentTime + .06);
+  const filt = actx.createBiquadFilter();
+  filt.type = 'bandpass'; filt.frequency.value = isError ? 900 : 2200; filt.Q.value = .8;
+  src.connect(filt); filt.connect(gain); gain.connect(actx.destination); src.start();
+}
+
+function startCountdown() {
+  const ring = document.getElementById('ring'), num = document.getElementById('timer-num');
+  cdTimer = setInterval(() => {
+    remaining--;
+    num.textContent = remaining;
+    ring.style.strokeDashoffset = CIRC * (1 - remaining / DURATION);
+    const p = remaining / DURATION;
+    ring.style.stroke = p > .4 ? '#a78bfa' : p > .2 ? '#f59e0b' : '#f87171';
+    if (remaining <= 0) endTest();
+  }, 1000);
+}
+
+function switchTab(tab) {
+  document.getElementById('top-words').style.display = tab==='top' ? 'block' : 'none';
+  document.getElementById('bot-words').style.display = tab==='bot' ? 'block' : 'none';
+  document.getElementById('tab-top').classList.toggle('active', tab==='top');
+  document.getElementById('tab-bot').classList.toggle('active', tab==='bot');
+}
+
+function buildWordTable(id, words, isTop) {
+  const max = Math.max(...words.map(w => w.wpm));
+  document.getElementById(id).innerHTML = words.map((w, i) => {
+    const pct = max > 0 ? w.wpm / max * 100 : 0;
+    const bar = isTop ? 'linear-gradient(90deg,#34d399,#60a5fa)' : 'linear-gradient(90deg,#f87171,#fb923c)';
+    const col = isTop ? '#34d399' : '#f87171';
+    return `<div class="word-row">
+      <div class="wr-rank">${i+1}</div>
+      <div class="wr-word">${w.word}</div>
+      <div class="wr-bar-wrap"><div class="wr-bar" style="width:${pct}%;background:${bar}"></div></div>
+      <div class="wr-wpm" style="color:${col}">${w.wpm} <span style="color:#475569;font-weight:400;font-size:.65rem">wpm</span></div>
+    </div>`;
+  }).join('');
+}
+
+function endTest() {
+  clearInterval(cdTimer); finished = true;
+  document.getElementById('user-input').disabled = true;
+  document.getElementById('subtitle').textContent = "Time's up! Here's your breakdown.";
+  const typed = document.getElementById('user-input').value;
+  const s = calcSnap(typed);
+  wpmH.push(s.wpm); accH.push(s.acc); tickLbls.push('60s');
+
+  document.getElementById('d-wpm').textContent = s.wpm;
+  document.getElementById('d-acc').textContent = s.acc + '%';
+  document.getElementById('d-chars').textContent = typed.length;
+  document.getElementById('d-err').textContent = s.wrong;
+  document.getElementById('dash-mode-label').textContent = '📊 ' + MODES[currentMode].label.replace(/^../,'').trim();
+
+  const bw = document.getElementById('badge-wrap');
+  const [lbl,bg,col] = s.wpm>=80?['🏆 Expert','rgba(167,139,250,.25)','#c4b5fd']
+    :s.wpm>=55?['⚡ Advanced','rgba(96,165,250,.25)','#93c5fd']
+    :s.wpm>=35?['👍 Intermediate','rgba(52,211,153,.25)','#6ee7b7']
+    :['🌱 Beginner','rgba(251,191,36,.25)','#fcd34d'];
+  bw.innerHTML = `<span class="perf-badge" style="background:${bg};color:${col}">${lbl}</span>`;
+
+  if (wordTimings.length > 0) {
+    const enriched = wordTimings.filter(w => w.word.length >= 2 && w.durMs > 0)
+      .map(w => ({...w, wpm: Math.round((w.word.length/5)/(w.durMs/60000))}))
+      .filter(w => w.wpm < 400);
+    if (enriched.length > 0) {
+      const sorted = [...enriched].sort((a,b) => b.wpm - a.wpm);
+      const fast = sorted[0], slow = sorted[sorted.length-1];
+      document.getElementById('fast-word').textContent = '"' + fast.word + '"';
+      document.getElementById('fast-wpm').textContent = fast.wpm;
+      document.getElementById('fast-ms').textContent = Math.round(fast.msPerChar);
+      document.getElementById('slow-word').textContent = '"' + slow.word + '"';
+      document.getElementById('slow-wpm').textContent = slow.wpm;
+      document.getElementById('slow-ms').textContent = Math.round(slow.msPerChar);
+      buildWordTable('top-words', sorted.slice(0,5), true);
+      buildWordTable('bot-words', sorted.slice(-5).reverse(), false);
+    }
+  }
+
+  document.getElementById('test-area').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  buildCharts(s.correct, s.wrong);
+}
+
+let charts = {};
+function destroyCharts() { Object.values(charts).forEach(c => c.destroy()); charts = {}; }
+function buildCharts(correct, wrong) {
+  destroyCharts();
+  const gc='rgba(255,255,255,.06)', tc='#64748b';
+  const base={responsive:true,animation:{duration:700},plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc,font:{size:10}},grid:{color:gc}},y:{ticks:{color:tc,font:{size:10}},grid:{color:gc}}}};
+  charts.wpm=new Chart(document.getElementById('wpmChart'),{type:'line',data:{labels:tickLbls,datasets:[{data:wpmH,borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.15)',fill:true,tension:.4,pointBackgroundColor:'#a78bfa',pointRadius:4,borderWidth:2}]},options:{...base,scales:{...base.scales,y:{...base.scales.y,beginAtZero:true}}}});
+  charts.acc=new Chart(document.getElementById('accChart'),{type:'line',data:{labels:tickLbls,datasets:[{data:accH,borderColor:'#34d399',backgroundColor:'rgba(52,211,153,.12)',fill:true,tension:.4,pointBackgroundColor:'#34d399',pointRadius:4,borderWidth:2}]},options:{...base,scales:{...base.scales,y:{...base.scales.y,min:0,max:100}}}});
+  charts.ks=new Chart(document.getElementById('ksChart'),{type:'bar',data:{labels:['Correct','Errors'],datasets:[{data:[correct,wrong],backgroundColor:['rgba(52,211,153,.7)','rgba(248,113,113,.7)'],borderColor:['#34d399','#f87171'],borderWidth:1,borderRadius:6}]},options:{indexAxis:'y',responsive:true,animation:{duration:700},plugins:{legend:{display:false}},scales:{x:{ticks:{color:tc,font:{size:10}},grid:{color:gc},beginAtZero:true},y:{ticks:{color:'#94a3b8',font:{size:11,weight:'500'}},grid:{display:false}}}}});
+}
+
+document.getElementById('user-input').addEventListener('input', function() {
+  if (finished) return;
+  const typed = this.value;
+  if (!startTime && typed.length > 0) {
+    startTime = Date.now(); lastTick = Date.now(); currentWordStart = Date.now();
+    startCountdown();
+    document.getElementById('subtitle').textContent = '60 seconds — type as fast as you can!';
+  }
+  if (typed.length > prevTypedLen) {
+    const last = typed.length - 1;
+    playKey(typed[last] !== fullText[last]);
+  }
+  trackWordTiming(typed);
+  updateTrack(typed);
+  if (typed.length) { updateLive(typed); maybeTick(typed); }
+});
+
+// Mode switching
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (finished || startTime) return; // don't switch mid-test
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+    document.getElementById('track-wrap').className = 'track-wrap mode-' + currentMode;
+    fullText = buildText(currentMode);
+    buildTrack(fullText, MODES[currentMode].mono);
+    document.getElementById('track').style.transform = 'translateX(0)';
+    document.getElementById('user-input').focus();
+  });
+});
+
+function startFresh() {
+  clearInterval(cdTimer);
+  remaining=DURATION; finished=false; startTime=null; lastTick=0;
+  wpmH=[]; accH=[]; tickLbls=[]; wordTimings=[]; currentWordStart=null; currentWordErrors=0; prevTypedLen=0;
+  destroyCharts();
+  document.getElementById('timer-num').textContent='60';
+  document.getElementById('ring').style.strokeDashoffset='0';
+  document.getElementById('ring').style.stroke='#a78bfa';
+  ['lv-wpm','lv-acc','lv-chars','lv-err'].forEach((id,i)=>document.getElementById(id).textContent=i===1?'100%':'0');
+  document.getElementById('sw').classList.remove('active');
+  document.getElementById('sa').classList.remove('active');
+  document.getElementById('subtitle').textContent='Choose a mode and click the bar to begin';
+  const inp=document.getElementById('user-input');
+  inp.disabled=false; inp.value='';
+  document.getElementById('test-area').style.display='block';
+  document.getElementById('dashboard').style.display='none';
+  fullText=buildText(currentMode);
+  buildTrack(fullText, MODES[currentMode].mono);
+  document.getElementById('track').style.transform='translateX(0)';
+  inp.focus();
+}
+
+startFresh();
+</script>
+</body>
+</html>
