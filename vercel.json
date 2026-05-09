@@ -1,0 +1,5 @@
+{
+    "rewrites": [
+          { "source": "/", "destination": "/typing_speed.html" }
+    ]
+}
