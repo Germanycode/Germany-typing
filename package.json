@@ -1,0 +1,15 @@
+{
+  "name": "germany-typing",
+  "version": "1.0.0",
+  "description": "60-Second Typing Speed Test",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild speed-insights.js --bundle --format=iife --outfile=speed-insights.bundle.js --minify"
+  },
+  "dependencies": {
+    "@vercel/speed-insights": "^2.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}
